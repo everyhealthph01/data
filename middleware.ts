@@ -1,66 +1,67 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-// Simple middleware that doesn't rely on external dependencies
-export async function middleware(request: NextRequest) {
-  // Create a basic response
+export function middleware(request: NextRequest) {
+  // Create response immediately to ensure we always return something
   const response = NextResponse.next()
 
   try {
-    // Skip middleware for static files and API routes
     const { pathname } = request.nextUrl
 
-    // Skip for static assets and files
+    // Skip all processing for static files, API routes, and special paths
     if (
       pathname.startsWith("/_next") ||
-      pathname.startsWith("/api/") ||
+      pathname.startsWith("/api") ||
+      pathname.startsWith("/favicon") ||
       pathname.includes(".") ||
       pathname === "/robots.txt" ||
-      pathname === "/sitemap.xml"
+      pathname === "/sitemap.xml" ||
+      pathname === "/manifest.json"
     ) {
       return response
     }
 
-    // Get auth cookie to check if user is logged in
-    const hasSession =
-      request.cookies.has("sb-access-token") ||
-      request.cookies.has("sb-refresh-token") ||
-      request.cookies.has("supabase-auth-token")
+    // Very basic auth check using cookies only
+    const authCookies = request.cookies.getAll()
+    const hasAuthCookie = authCookies.some(
+      (cookie) => cookie.name.includes("supabase") || cookie.name.includes("sb-") || cookie.name.includes("auth"),
+    )
 
-    // Basic route protection without Supabase client
+    // Simple route protection without any external dependencies
 
-    // Protect dashboard routes
-    if (pathname.startsWith("/dashboard") && !hasSession) {
-      return NextResponse.redirect(new URL("/auth/signin", request.url))
+    // Protect dashboard (patient area)
+    if (pathname.startsWith("/dashboard")) {
+      if (!hasAuthCookie) {
+        return NextResponse.redirect(new URL("/auth/signin", request.url))
+      }
+      return response
     }
 
     // Handle doctor routes
     if (pathname.startsWith("/doctor")) {
-      // Public doctor pages
-      const publicDoctorPages = ["/doctor/register", "/doctor/register/success", "/doctor/login"]
-
-      if (publicDoctorPages.includes(pathname)) {
+      // Always allow these public pages
+      if (pathname === "/doctor/register" || pathname === "/doctor/register/success" || pathname === "/doctor/login") {
         return response
       }
 
-      // All other doctor routes require authentication
-      if (!hasSession) {
+      // For all other doctor routes, just check for any auth cookie
+      if (!hasAuthCookie) {
         return NextResponse.redirect(new URL("/doctor/login", request.url))
       }
 
-      // For verification status, we'll rely on client-side checks
-      // This simplifies middleware and prevents server errors
+      return response
     }
 
-    // Redirect authenticated users away from auth pages
-    if ((pathname.startsWith("/auth/signin") || pathname.startsWith("/auth/signup")) && hasSession) {
-      // Default to dashboard - specific redirects handled client-side
-      return NextResponse.redirect(new URL("/dashboard", request.url))
+    // Redirect from auth pages if user seems to be logged in
+    if (pathname.startsWith("/auth/signin") || pathname.startsWith("/auth/signup")) {
+      if (hasAuthCookie) {
+        return NextResponse.redirect(new URL("/dashboard", request.url))
+      }
     }
 
     return response
   } catch (error) {
+    // Log error but always return a response
     console.error("Middleware error:", error)
-    // Always return a response, never throw
     return response
   }
 }
@@ -68,7 +69,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for static files and images
+     * Match all request paths except static files
      */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
