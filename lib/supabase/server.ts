@@ -1,39 +1,49 @@
-import { createClient } from "@supabase/supabase-js"
+import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
-// Original function with the name expected by the application
+// Server-side Supabase client
 export async function createServerSupabaseClient() {
-  const cookieStore = cookies()
-
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  // Return mock client if environment variables are missing (build time)
+  // Return mock client if environment variables are missing
   if (!supabaseUrl || !supabaseAnonKey) {
     return createMockSupabaseClient()
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      get(name) {
-        return cookieStore.get(name)?.value
+  try {
+    const cookieStore = cookies()
+
+    return createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        get(name) {
+          try {
+            return cookieStore.get(name)?.value
+          } catch (error) {
+            console.error("Error getting cookie:", error)
+            return undefined
+          }
+        },
+        set(name, value, options) {
+          try {
+            cookieStore.set({ name, value, ...options })
+          } catch (error) {
+            console.error("Error setting cookie:", error)
+          }
+        },
+        remove(name, options) {
+          try {
+            cookieStore.set({ name, value: "", ...options })
+          } catch (error) {
+            console.error("Error removing cookie:", error)
+          }
+        },
       },
-      set(name, value, options) {
-        try {
-          cookieStore.set({ name, value, ...options })
-        } catch (error) {
-          // Handle cookies in middleware or other contexts
-        }
-      },
-      remove(name, options) {
-        try {
-          cookieStore.set({ name, value: "", ...options })
-        } catch (error) {
-          // Handle cookies in middleware or other contexts
-        }
-      },
-    },
-  })
+    })
+  } catch (error) {
+    console.error("Error creating server client:", error)
+    return createMockSupabaseClient()
+  }
 }
 
 // Also export as createServerComponentClient for newer code
@@ -51,7 +61,7 @@ export async function getServerSideUser() {
   }
 }
 
-// Create a mock client for build time
+// Create a mock client for build time and error cases
 function createMockSupabaseClient() {
   return {
     auth: {

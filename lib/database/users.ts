@@ -58,203 +58,308 @@ export interface Doctor {
   updated_at: string
 }
 
-// Safe Supabase client that works during build time
+// Safe Supabase client with retry logic
 function getSafeSupabaseClient() {
-  if (typeof window === "undefined") {
+  try {
+    return createClientComponentClient()
+  } catch (error) {
+    console.error("Error creating Supabase client:", error)
     return null
   }
-  return createClientComponentClient()
 }
 
-// Patient functions
+// Retry wrapper for database operations
+async function withRetry<T>(operation: () => Promise<T>, retries = 3): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await operation()
+    } catch (error) {
+      if (i === retries - 1) throw error
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)))
+    }
+  }
+  throw new Error("Max retries exceeded")
+}
+
+// Patient functions with improved error handling
 export async function createPatientProfile(userId: string, patientData: Partial<Patient>) {
   try {
+    if (!userId) {
+      return { data: null, error: { message: "User ID is required" } }
+    }
+
     const supabase = getSafeSupabaseClient()
-    if (!supabase) return { data: null, error: { message: "Client not available" } }
+    if (!supabase) {
+      return { data: null, error: { message: "Database connection not available" } }
+    }
 
-    const { data, error } = await supabase
-      .from("patients")
-      .insert({
-        user_id: userId,
-        ...patientData,
-      })
-      .select()
-      .single()
+    const result = await withRetry(async () => {
+      const { data, error } = await supabase
+        .from("patients")
+        .insert({
+          user_id: userId,
+          ...patientData,
+        })
+        .select()
+        .single()
 
-    return { data, error }
+      return { data, error }
+    })
+
+    return result
   } catch (error) {
     console.error("Error creating patient profile:", error)
-    return { data: null, error }
+    return { data: null, error: error || { message: "Failed to create patient profile" } }
   }
 }
 
 export async function getPatientProfile(userId: string) {
   try {
+    if (!userId) {
+      return { data: null, error: { message: "User ID is required" } }
+    }
+
     const supabase = getSafeSupabaseClient()
-    if (!supabase) return { data: null, error: null }
+    if (!supabase) {
+      return { data: null, error: null }
+    }
 
-    const { data, error } = await supabase.from("patients").select("*").eq("user_id", userId).single()
+    const result = await withRetry(async () => {
+      const { data, error } = await supabase.from("patients").select("*").eq("user_id", userId).single()
 
-    return { data, error }
+      return { data, error }
+    })
+
+    return result
   } catch (error) {
     console.error("Error fetching patient profile:", error)
-    return { data: null, error }
+    return { data: null, error: error || { message: "Failed to fetch patient profile" } }
   }
 }
 
 export async function updatePatientProfile(userId: string, updates: Partial<Patient>) {
   try {
+    if (!userId) {
+      return { data: null, error: { message: "User ID is required" } }
+    }
+
     const supabase = getSafeSupabaseClient()
-    if (!supabase) return { data: null, error: { message: "Client not available" } }
+    if (!supabase) {
+      return { data: null, error: { message: "Database connection not available" } }
+    }
 
-    const { data, error } = await supabase
-      .from("patients")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId)
-      .select()
-      .single()
+    const result = await withRetry(async () => {
+      const { data, error } = await supabase
+        .from("patients")
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId)
+        .select()
+        .single()
 
-    return { data, error }
+      return { data, error }
+    })
+
+    return result
   } catch (error) {
     console.error("Error updating patient profile:", error)
-    return { data: null, error }
+    return { data: null, error: error || { message: "Failed to update patient profile" } }
   }
 }
 
-// Doctor functions
+// Doctor functions with improved error handling
 export async function createDoctorProfile(userId: string, doctorData: Partial<Doctor>) {
   try {
+    if (!userId) {
+      return { data: null, error: { message: "User ID is required" } }
+    }
+
     const supabase = getSafeSupabaseClient()
-    if (!supabase) return { data: null, error: { message: "Client not available" } }
+    if (!supabase) {
+      return { data: null, error: { message: "Database connection not available" } }
+    }
 
-    const { data, error } = await supabase
-      .from("doctors")
-      .insert({
-        user_id: userId,
-        is_active: false,
-        is_verified: false,
-        verification_status: "pending",
-        ...doctorData,
-      })
-      .select()
-      .single()
+    const result = await withRetry(async () => {
+      const { data, error } = await supabase
+        .from("doctors")
+        .insert({
+          user_id: userId,
+          is_active: false,
+          is_verified: false,
+          verification_status: "pending",
+          ...doctorData,
+        })
+        .select()
+        .single()
 
-    return { data, error }
+      return { data, error }
+    })
+
+    return result
   } catch (error) {
     console.error("Error creating doctor profile:", error)
-    return { data: null, error }
+    return { data: null, error: error || { message: "Failed to create doctor profile" } }
   }
 }
 
 export async function getDoctorProfile(userId: string) {
   try {
+    if (!userId) {
+      return { data: null, error: { message: "User ID is required" } }
+    }
+
     const supabase = getSafeSupabaseClient()
-    if (!supabase) return { data: null, error: null }
+    if (!supabase) {
+      return { data: null, error: null }
+    }
 
-    const { data, error } = await supabase.from("doctors").select("*").eq("user_id", userId).single()
+    const result = await withRetry(async () => {
+      const { data, error } = await supabase.from("doctors").select("*").eq("user_id", userId).single()
 
-    return { data, error }
+      return { data, error }
+    })
+
+    return result
   } catch (error) {
     console.error("Error fetching doctor profile:", error)
-    return { data: null, error }
+    return { data: null, error: error || { message: "Failed to fetch doctor profile" } }
   }
 }
 
 export async function updateDoctorProfile(userId: string, updates: Partial<Doctor>) {
   try {
+    if (!userId) {
+      return { data: null, error: { message: "User ID is required" } }
+    }
+
     const supabase = getSafeSupabaseClient()
-    if (!supabase) return { data: null, error: { message: "Client not available" } }
+    if (!supabase) {
+      return { data: null, error: { message: "Database connection not available" } }
+    }
 
-    const { data, error } = await supabase
-      .from("doctors")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId)
-      .select()
-      .single()
+    const result = await withRetry(async () => {
+      const { data, error } = await supabase
+        .from("doctors")
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId)
+        .select()
+        .single()
 
-    return { data, error }
+      return { data, error }
+    })
+
+    return result
   } catch (error) {
     console.error("Error updating doctor profile:", error)
-    return { data: null, error }
+    return { data: null, error: error || { message: "Failed to update doctor profile" } }
   }
 }
 
 export async function getAllVerifiedDoctors() {
   try {
     const supabase = getSafeSupabaseClient()
-    if (!supabase) return { data: [], error: null }
+    if (!supabase) {
+      return { data: [], error: null }
+    }
 
-    const { data, error } = await supabase
-      .from("doctors")
-      .select("*")
-      .eq("is_verified", true)
-      .eq("is_active", true)
-      .order("rating", { ascending: false })
+    const result = await withRetry(async () => {
+      const { data, error } = await supabase
+        .from("doctors")
+        .select("*")
+        .eq("is_verified", true)
+        .eq("is_active", true)
+        .order("rating", { ascending: false })
 
-    return { data: data || [], error }
+      return { data: data || [], error }
+    })
+
+    return result
   } catch (error) {
     console.error("Error fetching verified doctors:", error)
-    return { data: [], error }
+    return { data: [], error: error || { message: "Failed to fetch doctors" } }
   }
 }
 
 export async function getDoctorsBySpecialty(specialty: string) {
   try {
+    if (!specialty) {
+      return { data: [], error: { message: "Specialty is required" } }
+    }
+
     const supabase = getSafeSupabaseClient()
-    if (!supabase) return { data: [], error: null }
+    if (!supabase) {
+      return { data: [], error: null }
+    }
 
-    const { data, error } = await supabase
-      .from("doctors")
-      .select("*")
-      .eq("specialty", specialty)
-      .eq("is_verified", true)
-      .eq("is_active", true)
-      .order("rating", { ascending: false })
+    const result = await withRetry(async () => {
+      const { data, error } = await supabase
+        .from("doctors")
+        .select("*")
+        .eq("specialty", specialty)
+        .eq("is_verified", true)
+        .eq("is_active", true)
+        .order("rating", { ascending: false })
 
-    return { data: data || [], error }
+      return { data: data || [], error }
+    })
+
+    return result
   } catch (error) {
     console.error("Error fetching doctors by specialty:", error)
-    return { data: [], error }
+    return { data: [], error: error || { message: "Failed to fetch doctors by specialty" } }
   }
 }
 
-// User type detection
+// User type detection with improved error handling
 export async function getUserType(userId: string) {
   try {
+    if (!userId) {
+      return { userType: null, profile: null, error: { message: "User ID is required" } }
+    }
+
     const supabase = getSafeSupabaseClient()
-    if (!supabase) return { userType: null, profile: null, error: null }
+    if (!supabase) {
+      return { userType: null, profile: null, error: null }
+    }
 
-    // Check if user is a doctor
-    const { data: doctorData, error: doctorError } = await supabase
-      .from("doctors")
-      .select("*")
-      .eq("user_id", userId)
-      .single()
+    // Check if user is a doctor first
+    try {
+      const { data: doctorData, error: doctorError } = await supabase
+        .from("doctors")
+        .select("*")
+        .eq("user_id", userId)
+        .single()
 
-    if (doctorData && !doctorError) {
-      return { userType: "doctor", profile: doctorData, error: null }
+      if (doctorData && !doctorError) {
+        return { userType: "doctor", profile: doctorData, error: null }
+      }
+    } catch (error) {
+      // Continue to check patient if doctor check fails
     }
 
     // Check if user is a patient
-    const { data: patientData, error: patientError } = await supabase
-      .from("patients")
-      .select("*")
-      .eq("user_id", userId)
-      .single()
+    try {
+      const { data: patientData, error: patientError } = await supabase
+        .from("patients")
+        .select("*")
+        .eq("user_id", userId)
+        .single()
 
-    if (patientData && !patientError) {
-      return { userType: "patient", profile: patientData, error: null }
+      if (patientData && !patientError) {
+        return { userType: "patient", profile: patientData, error: null }
+      }
+    } catch (error) {
+      // User is neither doctor nor patient
     }
 
     return { userType: null, profile: null, error: null }
   } catch (error) {
     console.error("Error determining user type:", error)
-    return { userType: null, profile: null, error }
+    return { userType: null, profile: null, error: error || { message: "Failed to determine user type" } }
   }
 }

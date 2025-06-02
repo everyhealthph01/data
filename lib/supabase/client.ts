@@ -1,57 +1,33 @@
 import { createClient } from "@supabase/supabase-js"
 
-// Environment variables with fallbacks for build time
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+// Environment variables with proper validation
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 // Validate environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Missing Supabase environment variables")
+  if (typeof window !== "undefined") {
+    console.warn("Missing Supabase environment variables")
+  }
 }
 
-// Singleton client instance to prevent multiple GoTrueClient instances
+// Singleton client instance
 let supabaseClient: ReturnType<typeof createClient> | null = null
 
 // Create singleton Supabase client
 export function createClientComponentClient() {
-  // Return existing instance if available
   if (supabaseClient) {
     return supabaseClient
   }
 
-  // Only create client if environment variables are available
+  // Return mock client if environment variables are missing
   if (!supabaseUrl || !supabaseAnonKey) {
-    // Return a mock client for build time
-    return {
-      auth: {
-        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-        signInWithPassword: () => Promise.resolve({ data: { user: null, session: null }, error: null }),
-        signInWithOAuth: () => Promise.resolve({ data: { user: null, session: null }, error: null }),
-        signUp: () => Promise.resolve({ data: { user: null, session: null }, error: null }),
-        signOut: () => Promise.resolve({ error: null }),
-        resetPasswordForEmail: () => Promise.resolve({ error: null }),
-        updateUser: () => Promise.resolve({ error: null }),
-      },
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            single: () => Promise.resolve({ data: null, error: null }),
-            order: () => Promise.resolve({ data: [], error: null }),
-          }),
-          order: () => Promise.resolve({ data: [], error: null }),
-        }),
-        insert: () => Promise.resolve({ error: null }),
-        update: () => Promise.resolve({ error: null }),
-        delete: () => Promise.resolve({ error: null }),
-      }),
-    } as any
+    return createMockClient()
   }
 
-  // Create the actual Supabase client
   supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      persistSession: typeof window !== "undefined", // Only persist on client
+      persistSession: typeof window !== "undefined",
       autoRefreshToken: typeof window !== "undefined",
       detectSessionInUrl: typeof window !== "undefined",
     },
@@ -60,22 +36,62 @@ export function createClientComponentClient() {
   return supabaseClient
 }
 
+// Mock client for build time and missing env vars
+function createMockClient() {
+  return {
+    auth: {
+      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      signInWithPassword: () =>
+        Promise.resolve({ data: { user: null, session: null }, error: { message: "Environment not configured" } }),
+      signInWithOAuth: () =>
+        Promise.resolve({ data: { user: null, session: null }, error: { message: "Environment not configured" } }),
+      signUp: () =>
+        Promise.resolve({ data: { user: null, session: null }, error: { message: "Environment not configured" } }),
+      signOut: () => Promise.resolve({ error: null }),
+      resetPasswordForEmail: () => Promise.resolve({ error: null }),
+      updateUser: () => Promise.resolve({ error: null }),
+    },
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          single: () => Promise.resolve({ data: null, error: null }),
+          order: () => Promise.resolve({ data: [], error: null }),
+        }),
+        order: () => Promise.resolve({ data: [], error: null }),
+      }),
+      insert: () => Promise.resolve({ error: null }),
+      update: () => Promise.resolve({ error: null }),
+      delete: () => Promise.resolve({ error: null }),
+    }),
+  } as any
+}
+
 // Export for backward compatibility
 export { createClient }
 
-// Authentication helper functions
+// Authentication helper functions with proper error handling
 export async function signInWithEmail(email: string, password: string) {
   try {
+    if (!email || !password) {
+      return { data: { user: null, session: null }, error: { message: "Email and password are required" } }
+    }
+
     const supabase = createClientComponentClient()
-    return await supabase.auth.signInWithPassword({ email, password })
+    const result = await supabase.auth.signInWithPassword({ email, password })
+    return result
   } catch (error) {
     console.error("Sign in error:", error)
-    return { data: { user: null, session: null }, error }
+    return { data: { user: null, session: null }, error: error || { message: "Sign in failed" } }
   }
 }
 
 export async function signInWithGoogle() {
   try {
+    if (typeof window === "undefined") {
+      return { data: { user: null, session: null }, error: { message: "Not available on server" } }
+    }
+
     const supabase = createClientComponentClient()
     return await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -85,24 +101,28 @@ export async function signInWithGoogle() {
     })
   } catch (error) {
     console.error("Google sign in error:", error)
-    return { data: { user: null, session: null }, error }
+    return { data: { user: null, session: null }, error: error || { message: "Google sign in failed" } }
   }
 }
 
 export async function signUpWithEmail(email: string, password: string, fullName: string) {
   try {
+    if (!email || !password || !fullName) {
+      return { data: { user: null, session: null }, error: { message: "All fields are required" } }
+    }
+
     const supabase = createClientComponentClient()
     return await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/confirm` : undefined,
       },
     })
   } catch (error) {
     console.error("Sign up error:", error)
-    return { data: { user: null, session: null }, error }
+    return { data: { user: null, session: null }, error: error || { message: "Sign up failed" } }
   }
 }
 
@@ -112,16 +132,19 @@ export async function getCurrentUser() {
     return await supabase.auth.getUser()
   } catch (error) {
     console.error("Get user error:", error)
-    return { data: { user: null }, error }
+    return { data: { user: null }, error: error || { message: "Failed to get user" } }
   }
 }
 
 export async function signOut() {
   try {
     const supabase = createClientComponentClient()
-    return await supabase.auth.signOut()
+    const result = await supabase.auth.signOut()
+    // Clear the singleton client on sign out
+    supabaseClient = null
+    return result
   } catch (error) {
     console.error("Sign out error:", error)
-    return { error }
+    return { error: error || { message: "Sign out failed" } }
   }
 }

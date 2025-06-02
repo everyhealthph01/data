@@ -1,35 +1,53 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
+// Environment variable validation
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl) {
+  console.error("NEXT_PUBLIC_SUPABASE_URL is not defined.")
+}
+
+if (!supabaseAnonKey) {
+  console.error("NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined.")
+}
+
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
+  const supabaseResponse = NextResponse.next({
     request,
   })
 
   try {
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-            supabaseResponse = NextResponse.next({
-              request,
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error("Supabase URL or Anon Key is missing.")
+    }
+
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set({
+              name: name,
+              value: value,
+              ...options,
             })
-            cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
-          },
+            supabaseResponse.cookies.set({
+              name: name,
+              value: value,
+              ...options,
+            })
+          })
         },
       },
-    )
+    })
 
     // Refresh session if expired - with error handling
     let user = null
     try {
-      await supabase.auth.getUser()
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser()
@@ -105,11 +123,16 @@ export async function middleware(request: NextRequest) {
     ) {
       try {
         // Check if user is a doctor and redirect accordingly
-        const { data: doctorProfile } = await supabase
+        const { data: doctorProfile, error } = await supabase
           .from("doctors")
           .select("id, is_verified, is_active")
           .eq("user_id", user.id)
           .single()
+
+        if (error) {
+          console.error("Error fetching doctor profile:", error)
+          return NextResponse.redirect(new URL("/dashboard", request.url))
+        }
 
         if (doctorProfile && doctorProfile.is_verified && doctorProfile.is_active) {
           return NextResponse.redirect(new URL("/doctor/dashboard", request.url))
