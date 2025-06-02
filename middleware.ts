@@ -6,99 +6,131 @@ export async function middleware(request: NextRequest) {
     request,
   })
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+            supabaseResponse = NextResponse.next({
+              request,
+            })
+            cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
+          },
         },
       },
-    },
-  )
+    )
 
-  // Refresh session if expired - required for Server Components
-  await supabase.auth.getUser()
+    // Refresh session if expired - with error handling
+    let user = null
+    try {
+      await supabase.auth.getUser()
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+      user = authUser
+    } catch (error) {
+      console.error("Auth error in middleware:", error)
+      // Continue without user if auth fails
+    }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    // Protect dashboard routes (patient dashboard)
+    if (request.nextUrl.pathname.startsWith("/dashboard") && !user) {
+      return NextResponse.redirect(new URL("/auth/signin", request.url))
+    }
 
-  // Protect dashboard routes (patient dashboard)
-  if (request.nextUrl.pathname.startsWith("/dashboard") && !user) {
-    return NextResponse.redirect(new URL("/auth/signin", request.url))
-  }
+    // Protect doctor routes
+    if (request.nextUrl.pathname.startsWith("/doctor")) {
+      // Allow access to doctor registration and login pages without authentication
+      if (
+        request.nextUrl.pathname === "/doctor/register" ||
+        request.nextUrl.pathname === "/doctor/register/success" ||
+        request.nextUrl.pathname === "/doctor/login"
+      ) {
+        return supabaseResponse
+      }
 
-  // Protect doctor routes
-  if (request.nextUrl.pathname.startsWith("/doctor")) {
-    // Allow access to doctor registration and login pages without authentication
+      // Require authentication for all other doctor routes
+      if (!user) {
+        return NextResponse.redirect(new URL("/doctor/login", request.url))
+      }
+
+      // For doctor dashboard, just check if user is authenticated
+      if (request.nextUrl.pathname === "/doctor/dashboard") {
+        return supabaseResponse
+      }
+
+      // For other doctor routes, check if user is a verified doctor (with error handling)
+      try {
+        const { data: doctorProfile, error } = await supabase
+          .from("doctors")
+          .select("id, is_verified, is_active, verification_status")
+          .eq("user_id", user.id)
+          .single()
+
+        if (error && error.code !== "PGRST116") {
+          // If there's a database error (not "no rows"), log it and allow access
+          console.error("Database error in middleware:", error)
+          return supabaseResponse
+        }
+
+        // If no doctor profile exists, redirect to registration
+        if (!doctorProfile) {
+          if (request.nextUrl.pathname !== "/doctor/register") {
+            return NextResponse.redirect(new URL("/doctor/register", request.url))
+          }
+        }
+        // If doctor profile exists but not verified/active, show pending page
+        else if (!doctorProfile.is_verified || !doctorProfile.is_active) {
+          if (request.nextUrl.pathname !== "/doctor/pending") {
+            return NextResponse.redirect(new URL("/doctor/pending", request.url))
+          }
+        }
+      } catch (error) {
+        console.error("Error checking doctor profile:", error)
+        // On error, allow access to prevent blocking
+        return supabaseResponse
+      }
+    }
+
+    // Redirect authenticated users away from auth pages
     if (
-      request.nextUrl.pathname === "/doctor/register" ||
-      request.nextUrl.pathname === "/doctor/register/success" ||
-      request.nextUrl.pathname === "/doctor/login"
+      (request.nextUrl.pathname.startsWith("/auth/signin") || request.nextUrl.pathname.startsWith("/auth/signup")) &&
+      user
     ) {
-      return supabaseResponse
-    }
+      try {
+        // Check if user is a doctor and redirect accordingly
+        const { data: doctorProfile } = await supabase
+          .from("doctors")
+          .select("id, is_verified, is_active")
+          .eq("user_id", user.id)
+          .single()
 
-    // Require authentication for all other doctor routes
-    if (!user) {
-      return NextResponse.redirect(new URL("/doctor/login", request.url))
-    }
-
-    // For doctor dashboard, just check if user is authenticated
-    if (request.nextUrl.pathname === "/doctor/dashboard") {
-      return supabaseResponse
-    }
-
-    // For other doctor routes, check if user is a verified doctor
-    const { data: doctorProfile } = await supabase
-      .from("doctors")
-      .select("id, is_verified, is_active, verification_status")
-      .eq("user_id", user.id)
-      .single()
-
-    // If no doctor profile exists, redirect to registration
-    if (!doctorProfile) {
-      if (request.nextUrl.pathname !== "/doctor/register") {
-        return NextResponse.redirect(new URL("/doctor/register", request.url))
+        if (doctorProfile && doctorProfile.is_verified && doctorProfile.is_active) {
+          return NextResponse.redirect(new URL("/doctor/dashboard", request.url))
+        } else {
+          return NextResponse.redirect(new URL("/dashboard", request.url))
+        }
+      } catch (error) {
+        console.error("Error checking user type:", error)
+        // Default to patient dashboard on error
+        return NextResponse.redirect(new URL("/dashboard", request.url))
       }
     }
-    // If doctor profile exists but not verified/active, show pending page
-    else if (!doctorProfile.is_verified || !doctorProfile.is_active) {
-      if (request.nextUrl.pathname !== "/doctor/pending") {
-        return NextResponse.redirect(new URL("/doctor/pending", request.url))
-      }
-    }
+
+    return supabaseResponse
+  } catch (error) {
+    console.error("Middleware error:", error)
+    // Return a basic response if middleware fails completely
+    return NextResponse.next({
+      request,
+    })
   }
-
-  // Redirect authenticated users away from auth pages
-  if (
-    (request.nextUrl.pathname.startsWith("/auth/signin") || request.nextUrl.pathname.startsWith("/auth/signup")) &&
-    user
-  ) {
-    // Check if user is a doctor and redirect accordingly
-    const { data: doctorProfile } = await supabase
-      .from("doctors")
-      .select("id, is_verified, is_active")
-      .eq("user_id", user.id)
-      .single()
-
-    if (doctorProfile && doctorProfile.is_verified && doctorProfile.is_active) {
-      return NextResponse.redirect(new URL("/doctor/dashboard", request.url))
-    } else {
-      return NextResponse.redirect(new URL("/dashboard", request.url))
-    }
-  }
-
-  return supabaseResponse
 }
 
 export const config = {
