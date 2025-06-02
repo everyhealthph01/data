@@ -1,88 +1,84 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import type { Database } from "@/types/supabase"
 
-// Server-side Supabase client
-export async function createServerSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Environment variables with fallbacks
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
-  // Return mock client if environment variables are missing
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return createMockSupabaseClient()
-  }
-
+export function createServerComponentClient() {
   try {
     const cookieStore = cookies()
 
-    return createServerClient(supabaseUrl, supabaseAnonKey, {
+    return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
       cookies: {
-        get(name) {
-          try {
-            return cookieStore.get(name)?.value
-          } catch (error) {
-            console.error("Error getting cookie:", error)
-            return undefined
-          }
+        getAll() {
+          return cookieStore.getAll()
         },
-        set(name, value, options) {
-          try {
-            cookieStore.set({ name, value, ...options })
-          } catch (error) {
-            console.error("Error setting cookie:", error)
-          }
-        },
-        remove(name, options) {
-          try {
-            cookieStore.set({ name, value: "", ...options })
-          } catch (error) {
-            console.error("Error removing cookie:", error)
-          }
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
         },
       },
     })
   } catch (error) {
-    console.error("Error creating server client:", error)
-    return createMockSupabaseClient()
-  }
-}
+    console.error("Error creating server component client:", error)
 
-// Also export as createServerComponentClient for newer code
-export const createServerComponentClient = createServerSupabaseClient
-
-// Helper function for server-side data fetching
-export async function getServerSideUser() {
-  try {
-    const supabase = await createServerSupabaseClient()
-    const { data, error } = await supabase.auth.getUser()
-    return { user: data?.user || null, error }
-  } catch (error) {
-    console.error("Server-side user fetch error:", error)
-    return { user: null, error }
-  }
-}
-
-// Create a mock client for build time and error cases
-function createMockSupabaseClient() {
-  return {
-    auth: {
-      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-    },
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          single: () => Promise.resolve({ data: null, error: null }),
-          order: () => ({
-            limit: () => Promise.resolve({ data: [], error: null }),
+    // Return a mock client if creation fails
+    return {
+      auth: {
+        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      },
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: null, error: null }),
           }),
-        }),
-        order: () => ({
-          limit: () => Promise.resolve({ data: [], error: null }),
+          order: () => Promise.resolve({ data: [], error: null }),
         }),
       }),
-      insert: () => Promise.resolve({ error: null }),
-      update: () => Promise.resolve({ error: null }),
-      delete: () => Promise.resolve({ error: null }),
-    }),
-  } as any
+    } as any
+  }
 }
+
+export function createServerActionClient() {
+  try {
+    const cookieStore = cookies()
+
+    return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        },
+      },
+    })
+  } catch (error) {
+    console.error("Error creating server action client:", error)
+
+    // Return a mock client if creation fails
+    return {
+      auth: {
+        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      },
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: null, error: null }),
+          }),
+          order: () => Promise.resolve({ data: [], error: null }),
+        }),
+      }),
+    } as any
+  }
+}
+
+// Export alias for backward compatibility
+export const createServerSupabaseClient = createServerComponentClient
