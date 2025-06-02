@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Stethoscope, ArrowLeft, Mail, Phone, MapPin, Clock, MessageCircle, Send, CheckCircle } from "lucide-react"
 import Link from "next/link"
+import { ResponsiveContainer } from "@/components/responsive-container"
+import { MobileMenu } from "@/components/mobile-menu"
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -39,14 +41,26 @@ export default function ContactPage() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
+  const menuLinks = [
+    { href: "/", label: "Home" },
+    { href: "/auth/signin", label: "Sign In" },
+    { href: "/auth/signup", label: "Sign Up" },
+    { href: "/doctor/login", label: "Doctor Login" },
+    { href: "/doctor/register", label: "Join as Doctor" },
+    { href: "/help", label: "Help Center" },
+    { href: "/privacy", label: "Privacy Policy" },
+    { href: "/terms", label: "Terms of Service" },
+  ]
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
-              <Link href="/">
+              <MobileMenu links={menuLinks} title="EveryHealthPH Menu" />
+              <Link href="/" className="hidden sm:flex items-center space-x-2">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Home
@@ -61,22 +75,22 @@ export default function ContactPage() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <ResponsiveContainer className="py-8 sm:py-12">
         {/* Hero Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Get in Touch</h1>
-          <p className="text-xl text-gray-600">We're here to help and answer any questions you might have</p>
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Get in Touch</h1>
+          <p className="text-lg sm:text-xl text-gray-600">We're here to help and answer any questions you might have</p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Contact Information */}
           <div className="lg:col-span-1">
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center space-x-4 mb-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Phone className="h-6 w-6 text-blue-600" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Phone className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">Phone Support</h3>
@@ -89,26 +103,26 @@ export default function ContactPage() {
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center space-x-4 mb-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                      <Mail className="h-6 w-6 text-green-600" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">Email Support</h3>
                       <p className="text-gray-600">Send us a detailed message</p>
                     </div>
                   </div>
-                  <p className="text-lg font-medium text-gray-900">support@everyhealthph.com</p>
+                  <p className="text-lg font-medium text-gray-900 break-all">support@everyhealthph.com</p>
                   <p className="text-sm text-gray-600">We'll respond within 24 hours</p>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center space-x-4 mb-4">
-                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                      <MessageCircle className="h-6 w-6 text-purple-600" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                      <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">Live Chat</h3>
@@ -120,10 +134,10 @@ export default function ContactPage() {
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center space-x-4 mb-4">
-                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                      <MapPin className="h-6 w-6 text-orange-600" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                      <MapPin className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">Office Address</h3>
@@ -141,10 +155,10 @@ export default function ContactPage() {
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center space-x-4 mb-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Clock className="h-6 w-6 text-blue-600" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">Business Hours</h3>
@@ -171,11 +185,11 @@ export default function ContactPage() {
           {/* Contact Form */}
           <div className="lg:col-span-2">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl">Send us a Message</CardTitle>
+              <CardHeader className="px-4 py-4 sm:px-6 sm:py-6">
+                <CardTitle className="text-xl sm:text-2xl">Send us a Message</CardTitle>
                 <CardDescription>Fill out the form below and we'll get back to you as soon as possible</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 pb-6 sm:px-6 sm:pb-8">
                 {isSubmitted ? (
                   <Alert className="border-green-200 bg-green-50">
                     <CheckCircle className="h-4 w-4 text-green-600" />
@@ -185,7 +199,7 @@ export default function ContactPage() {
                     </AlertDescription>
                   </Alert>
                 ) : (
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="name">Full Name *</Label>
@@ -213,7 +227,7 @@ export default function ContactPage() {
                     <div>
                       <Label htmlFor="category">Category *</Label>
                       <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                        <SelectTrigger>
+                        <SelectTrigger id="category">
                           <SelectValue placeholder="Select a category" />
                         </SelectTrigger>
                         <SelectContent>
@@ -271,8 +285,8 @@ export default function ContactPage() {
         </div>
 
         {/* Emergency Contact */}
-        <Card className="mt-8 bg-red-50 border-red-200">
-          <CardContent className="p-6">
+        <Card className="mt-6 sm:mt-8 bg-red-50 border-red-200">
+          <CardContent className="p-4 sm:p-6">
             <div className="text-center">
               <h3 className="text-lg font-semibold text-red-900 mb-2">Medical Emergency?</h3>
               <p className="text-red-700 mb-4">
@@ -289,7 +303,7 @@ export default function ContactPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </ResponsiveContainer>
     </div>
   )
 }

@@ -29,6 +29,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClientComponentClient } from "@/lib/supabase/client"
+import { ResponsiveContainer } from "@/components/responsive-container"
 
 interface DocumentUpload {
   file: File | null
@@ -504,7 +505,7 @@ export default function DoctorRegisterPage() {
             <fieldset className="space-y-4">
               <legend className="font-medium text-gray-900 mb-3">Address Information</legend>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
+                <div className="sm:col-span-2">
                   <Label htmlFor="address">Street Address</Label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -755,13 +756,14 @@ export default function DoctorRegisterPage() {
                         onClick={() => handleDayToggle(day)}
                         aria-pressed={professionalInfo.availableDays.includes(day)}
                         aria-label={`${day} ${professionalInfo.availableDays.includes(day) ? "selected" : "not selected"}`}
+                        className="mb-2"
                       >
                         {day}
                       </Button>
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="startTime">Available From</Label>
                     <Input
@@ -814,6 +816,7 @@ export default function DoctorRegisterPage() {
                     onClick={() => handleLanguageToggle(language)}
                     aria-pressed={professionalInfo.languages.includes(language)}
                     aria-label={`${language} ${professionalInfo.languages.includes(language) ? "selected" : "not selected"}`}
+                    className="mb-2"
                   >
                     {language}
                   </Button>
@@ -864,10 +867,10 @@ export default function DoctorRegisterPage() {
                   aria-labelledby={`doc-title-${doc.key}`}
                   aria-describedby={`doc-desc-${doc.key}`}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex-1 mb-4 sm:mb-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
                           <h4 id={`doc-title-${doc.key}`} className="font-medium text-gray-900">
                             {doc.title}
                           </h4>
@@ -916,7 +919,7 @@ export default function DoctorRegisterPage() {
                         )}
                       </div>
 
-                      <div className="ml-4">
+                      <div className="flex justify-start sm:justify-end">
                         <input
                           type="file"
                           id={`file-${doc.key}`}
@@ -973,7 +976,7 @@ export default function DoctorRegisterPage() {
 
             <div className="space-y-4">
               <Card className="border border-gray-200">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start space-x-3">
                     <Checkbox
                       id="termsOfService"
@@ -1000,7 +1003,7 @@ export default function DoctorRegisterPage() {
               </Card>
 
               <Card className="border border-gray-200">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start space-x-3">
                     <Checkbox
                       id="privacyPolicy"
@@ -1027,7 +1030,7 @@ export default function DoctorRegisterPage() {
               </Card>
 
               <Card className="border border-gray-200">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start space-x-3">
                     <Checkbox
                       id="medicalEthics"
@@ -1051,7 +1054,7 @@ export default function DoctorRegisterPage() {
               </Card>
 
               <Card className="border border-gray-200">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start space-x-3">
                     <Checkbox
                       id="dataSharing"
@@ -1098,66 +1101,86 @@ export default function DoctorRegisterPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50/30">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/50">
-        <div className="max-w-4xl mx-auto px-6 py-4">
+      <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/50 sticky top-0 z-10">
+        <div className="w-full px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/">
-                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Home
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Link href="/" className="flex items-center">
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900 p-1 sm:p-2">
+                  <ArrowLeft className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Back</span>
                 </Button>
               </Link>
-              <div className="flex items-center space-x-3">
-                <Stethoscope className="h-8 w-8 text-emerald-600" />
-                <span className="text-xl font-bold text-gray-900">EveryHealthPH</span>
-                <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Doctor Registration</Badge>
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <Stethoscope className="h-6 w-6 sm:h-8 sm:w-8 text-emerald-600" />
+                <span className="text-base sm:text-xl font-bold text-gray-900">EveryHealthPH</span>
+                <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs">
+                  Doctor Registration
+                </Badge>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Progress Steps */}
+      <ResponsiveContainer className="py-6 sm:py-8">
+        {/* Progress Steps - Mobile Optimized */}
         <div
-          className="mb-8"
+          className="mb-6 sm:mb-8"
           role="progressbar"
           aria-valuenow={currentStep}
           aria-valuemin={1}
           aria-valuemax={4}
           aria-label={`Registration progress: ${getStepAriaLabel(currentStep)}`}
         >
-          <div className="flex items-center justify-between">
-            {[1, 2, 3, 4].map((step) => (
-              <div key={step} className="flex items-center">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-medium ${
-                    step <= currentStep ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-600"
-                  }`}
-                  aria-label={`Step ${step}: ${step <= currentStep ? "Completed" : "Not completed"}`}
-                  role="img"
-                >
-                  {step < currentStep ? (
-                    <CheckCircle className="h-5 w-5" aria-hidden="true" />
-                  ) : (
-                    <span aria-hidden="true">{step}</span>
+          {/* Mobile Progress Bar */}
+          <div className="block sm:hidden mb-4">
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div className="bg-emerald-600 h-2.5 rounded-full" style={{ width: `${getProgressPercentage()}%` }}></div>
+            </div>
+            <div className="flex justify-between mt-2 text-xs text-gray-600">
+              <span>Step {currentStep} of 4</span>
+              <span>{Math.round(getProgressPercentage())}% Complete</span>
+            </div>
+          </div>
+
+          {/* Desktop Progress Steps */}
+          <div className="hidden sm:block">
+            <div className="flex items-center justify-between">
+              {[1, 2, 3, 4].map((step) => (
+                <div key={step} className="flex items-center">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-medium ${
+                      step <= currentStep ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-600"
+                    }`}
+                    aria-label={`Step ${step}: ${step <= currentStep ? "Completed" : "Not completed"}`}
+                    role="img"
+                  >
+                    {step < currentStep ? (
+                      <CheckCircle className="h-5 w-5" aria-hidden="true" />
+                    ) : (
+                      <span aria-hidden="true">{step}</span>
+                    )}
+                  </div>
+                  {step < 4 && (
+                    <div
+                      className={`w-full h-1 mx-2 ${step < currentStep ? "bg-emerald-600" : "bg-gray-200"}`}
+                      aria-hidden="true"
+                    />
                   )}
                 </div>
-                {step < 4 && (
-                  <div
-                    className={`w-24 h-1 mx-2 ${step < currentStep ? "bg-emerald-600" : "bg-gray-200"}`}
-                    aria-hidden="true"
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-between mt-2 text-sm text-gray-600" role="list" aria-label="Registration steps">
-            <span role="listitem">Personal Info</span>
-            <span role="listitem">Professional Info</span>
-            <span role="listitem">Documents</span>
-            <span role="listitem">Review & Submit</span>
+              ))}
+            </div>
+            <div
+              className="flex justify-between mt-2 text-xs sm:text-sm text-gray-600"
+              role="list"
+              aria-label="Registration steps"
+            >
+              <span role="listitem">Personal Info</span>
+              <span role="listitem">Professional Info</span>
+              <span role="listitem">Documents</span>
+              <span role="listitem">Review & Submit</span>
+            </div>
           </div>
           <div className="sr-only" aria-live="polite" aria-atomic="true">
             {getStepAriaLabel(currentStep)}. Progress: {getProgressPercentage()}% complete.
@@ -1166,21 +1189,21 @@ export default function DoctorRegisterPage() {
 
         {/* Main Content */}
         <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-2xl">
+          <CardHeader className="px-4 py-4 sm:px-6 sm:py-6">
+            <CardTitle className="text-xl sm:text-2xl">
               {currentStep === 1 && "Personal Information"}
               {currentStep === 2 && "Professional Information"}
               {currentStep === 3 && "Document Verification"}
               {currentStep === 4 && "Review & Submit"}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm">
               {currentStep === 1 && "Please provide your personal details"}
               {currentStep === 2 && "Tell us about your medical background and expertise"}
               {currentStep === 3 && "Upload required documents for verification"}
               {currentStep === 4 && "Review your information and complete registration"}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-6 sm:px-6 sm:pb-8">
             {error && (
               <Alert variant="destructive" className="mb-6" role="alert">
                 <AlertTriangle className="h-4 w-4" />
@@ -1197,7 +1220,7 @@ export default function DoctorRegisterPage() {
 
             {renderStepContent()}
 
-            {/* Navigation Buttons */}
+            {/* Navigation Buttons - Mobile Optimized */}
             <nav
               className="flex justify-between mt-8 pt-6 border-t border-gray-200"
               aria-label="Registration navigation"
@@ -1206,40 +1229,44 @@ export default function DoctorRegisterPage() {
                 variant="outline"
                 onClick={prevStep}
                 disabled={currentStep === 1}
-                className="px-6"
+                className="px-3 sm:px-6"
                 aria-label={
                   currentStep === 1
                     ? "Previous step (disabled, first step)"
                     : `Go to previous step: ${getStepAriaLabel(currentStep - 1)}`
                 }
               >
-                Previous
+                <ArrowLeft className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Previous</span>
               </Button>
 
               {currentStep < 4 ? (
                 <Button
                   onClick={nextStep}
-                  className="px-6 bg-emerald-600 hover:bg-emerald-700"
+                  className="px-3 sm:px-6 bg-emerald-600 hover:bg-emerald-700"
                   aria-label={`Continue to next step: ${getStepAriaLabel(currentStep + 1)}`}
                 >
-                  Next
+                  <span className="hidden sm:inline">Next</span>
+                  <ArrowLeft className="h-4 w-4 rotate-180 sm:ml-2" />
                 </Button>
               ) : (
                 <Button
                   onClick={handleSubmit}
                   disabled={isLoading}
-                  className="px-6 bg-emerald-600 hover:bg-emerald-700"
+                  className="px-3 sm:px-6 bg-emerald-600 hover:bg-emerald-700"
                   aria-label="Submit doctor registration application"
                   aria-describedby="submit-help"
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
-                      <span>Submitting...</span>
-                      <span className="sr-only">Please wait while your application is being submitted</span>
+                      <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" aria-hidden="true" />
+                      <span className="hidden sm:inline">Submitting...</span>
                     </>
                   ) : (
-                    "Submit Application"
+                    <>
+                      <span className="hidden sm:inline">Submit Application</span>
+                      <span className="inline sm:hidden">Submit</span>
+                    </>
                   )}
                 </Button>
               )}
@@ -1253,7 +1280,7 @@ export default function DoctorRegisterPage() {
         <div className="sr-only" aria-live="polite" aria-atomic="true" role="status">
           {announcement}
         </div>
-      </div>
+      </ResponsiveContainer>
     </div>
   )
 }
