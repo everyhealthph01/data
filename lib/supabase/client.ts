@@ -1,53 +1,60 @@
 import { createClient } from "@supabase/supabase-js"
 
-// Environment variables with proper validation
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Validate environment variables
-if (!supabaseUrl || !supabaseAnonKey) {
-  if (typeof window !== "undefined") {
-    console.warn("Missing Supabase environment variables")
-  }
-}
+// Singleton pattern to prevent multiple instances
+let supabaseInstance: ReturnType<typeof createClient> | null = null
 
-// Singleton client instance
-let supabaseClient: ReturnType<typeof createClient> | null = null
-
-// Create singleton Supabase client
 export function createClientComponentClient() {
-  if (supabaseClient) {
-    return supabaseClient
+  // Return existing instance if available
+  if (supabaseInstance) {
+    return supabaseInstance
   }
 
-  // Return mock client if environment variables are missing
+  // Check for environment variables
   if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn("Supabase environment variables are missing")
     return createMockClient()
   }
 
-  supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: typeof window !== "undefined",
-      autoRefreshToken: typeof window !== "undefined",
-      detectSessionInUrl: typeof window !== "undefined",
-    },
-  })
+  try {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: typeof window !== "undefined",
+        autoRefreshToken: typeof window !== "undefined",
+        detectSessionInUrl: typeof window !== "undefined",
+      },
+    })
 
-  return supabaseClient
+    return supabaseInstance
+  } catch (error) {
+    console.error("Error creating Supabase client:", error)
+    return createMockClient()
+  }
 }
 
-// Mock client for build time and missing env vars
+// Mock client for fallback
 function createMockClient() {
   return {
     auth: {
       getUser: () => Promise.resolve({ data: { user: null }, error: null }),
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
       signInWithPassword: () =>
-        Promise.resolve({ data: { user: null, session: null }, error: { message: "Environment not configured" } }),
+        Promise.resolve({
+          data: { user: null, session: null },
+          error: { message: "Supabase not configured" },
+        }),
       signInWithOAuth: () =>
-        Promise.resolve({ data: { user: null, session: null }, error: { message: "Environment not configured" } }),
+        Promise.resolve({
+          data: { user: null, session: null },
+          error: { message: "Supabase not configured" },
+        }),
       signUp: () =>
-        Promise.resolve({ data: { user: null, session: null }, error: { message: "Environment not configured" } }),
+        Promise.resolve({
+          data: { user: null, session: null },
+          error: { message: "Supabase not configured" },
+        }),
       signOut: () => Promise.resolve({ error: null }),
       resetPasswordForEmail: () => Promise.resolve({ error: null }),
       updateUser: () => Promise.resolve({ error: null }),
@@ -70,19 +77,14 @@ function createMockClient() {
 // Export for backward compatibility
 export { createClient }
 
-// Authentication helper functions with proper error handling
+// Authentication helpers with error handling
 export async function signInWithEmail(email: string, password: string) {
   try {
-    if (!email || !password) {
-      return { data: { user: null, session: null }, error: { message: "Email and password are required" } }
-    }
-
     const supabase = createClientComponentClient()
-    const result = await supabase.auth.signInWithPassword({ email, password })
-    return result
+    return await supabase.auth.signInWithPassword({ email, password })
   } catch (error) {
     console.error("Sign in error:", error)
-    return { data: { user: null, session: null }, error: error || { message: "Sign in failed" } }
+    return { data: { user: null, session: null }, error }
   }
 }
 
@@ -101,16 +103,12 @@ export async function signInWithGoogle() {
     })
   } catch (error) {
     console.error("Google sign in error:", error)
-    return { data: { user: null, session: null }, error: error || { message: "Google sign in failed" } }
+    return { data: { user: null, session: null }, error }
   }
 }
 
 export async function signUpWithEmail(email: string, password: string, fullName: string) {
   try {
-    if (!email || !password || !fullName) {
-      return { data: { user: null, session: null }, error: { message: "All fields are required" } }
-    }
-
     const supabase = createClientComponentClient()
     return await supabase.auth.signUp({
       email,
@@ -122,7 +120,7 @@ export async function signUpWithEmail(email: string, password: string, fullName:
     })
   } catch (error) {
     console.error("Sign up error:", error)
-    return { data: { user: null, session: null }, error: error || { message: "Sign up failed" } }
+    return { data: { user: null, session: null }, error }
   }
 }
 
@@ -132,7 +130,7 @@ export async function getCurrentUser() {
     return await supabase.auth.getUser()
   } catch (error) {
     console.error("Get user error:", error)
-    return { data: { user: null }, error: error || { message: "Failed to get user" } }
+    return { data: { user: null }, error }
   }
 }
 
@@ -140,11 +138,11 @@ export async function signOut() {
   try {
     const supabase = createClientComponentClient()
     const result = await supabase.auth.signOut()
-    // Clear the singleton client on sign out
-    supabaseClient = null
+    // Clear singleton on sign out
+    supabaseInstance = null
     return result
   } catch (error) {
     console.error("Sign out error:", error)
-    return { error: error || { message: "Sign out failed" } }
+    return { error }
   }
 }
